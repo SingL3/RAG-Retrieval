@@ -80,6 +80,7 @@ def parse_args():
     # deepspeed config 文件中的 gradient_accumulation_steps 配置会覆盖 args.gradient_accumulation_steps
     # 所以删除 deepspeed config 文件中的 gradient_accumulation_steps 配置
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1)
+    parser.add_argument('--gradient_checkpointing', action='store_true', help='if use gradient_checkpointing')
     parser.add_argument("--num_labels", type=int, default=1, help="mlp dim")
     parser.add_argument("--query_format", type=str, default="{}")
     parser.add_argument("--document_format", type=str, default="{}")
@@ -194,6 +195,9 @@ def main():
                 tag="validation",
             )
 
+    if args.gradient_checkpointing:
+        model.model.gradient_checkpointing_enable() # explicitly pass {"use_reentrant": False} is recommeded
+        model.model.enable_input_require_grads()
     num_workers = 10
     train_dataloader = DataLoader(
         train_dataset,
@@ -268,7 +272,12 @@ def main():
     accelerator.print("Saving model ...")
     save_dir = args.output_dir + "/model"
     unwrapped_model = accelerator.unwrap_model(model)
-    unwrapped_model.save_pretrained(save_dir, safe_serialization=False)
+    unwrapped_model.model.save_pretrained(
+        save_dir,
+        state_dict=accelerator.get_state_dict(unwrapped_model.model),
+        save_function=accelerator.save,
+        safe_serialization=False
+    )
     model.tokenizer.save_pretrained(save_dir)
     accelerator.print("Saving Successfully!")
 

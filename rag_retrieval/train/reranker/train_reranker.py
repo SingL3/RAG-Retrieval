@@ -269,18 +269,5 @@ def main():
     trainer.train()
     accelerator.print("Training finished!")
 
-    accelerator.print("Saving model ...")
-    save_dir = args.output_dir + "/model"
-    unwrapped_model = accelerator.unwrap_model(model)
-    unwrapped_model.model.save_pretrained(
-        save_dir,
-        state_dict=accelerator.get_state_dict(unwrapped_model.model),
-        save_function=accelerator.save,
-        safe_serialization=False
-    )
-    model.tokenizer.save_pretrained(save_dir)
-    accelerator.print("Saving Successfully!")
-
-
 if __name__ == "__main__":
     main()

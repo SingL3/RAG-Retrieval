@@ -130,7 +130,13 @@ class Trainer:
             self.progress_bar.on_epoch_end()
 
             if self.save_on_epoch_end:
-                self.save_model(current_epoch)
+                save_dir = self.get_checkpoint_dir(current_epoch)
+                self.save_model(save_dir)
+
+        self.accelerator.print("Saving model ...")
+        save_dir = os.path.join(self.accelerator.project_dir, "..", "model")
+        self.save_model(save_dir)
+        self.accelerator.print("Saving Successfully!")
 
         self.accelerator.end_training()
 
@@ -173,10 +179,9 @@ class Trainer:
             os.makedirs(output_dir, exist_ok=True)
         return output_dir
     
-    def save_model(self, current_epoch: int):
-        save_dir = self.get_checkpoint_dir(current_epoch)
+    def save_model(self, save_dir: str):
         if self.accelerator.is_main_process:
-            print(save_dir)
+            self.accelerator.print(f"Saving to {save_dir}.")
             self.tokenizer.save_pretrained(save_dir)
         unwrapped_model = self.accelerator.unwrap_model(self.model)
         unwrapped_model.model.save_pretrained(
